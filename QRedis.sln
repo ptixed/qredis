@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.168
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QRedis", "QRedis\QRedis.csproj", "{C2E45802-1291-4154-82BC-A784DD8DE926}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QRedis.Console", "QRedis.Console\QRedis.Console.csproj", "{3A83981D-8C54-4F4E-A04E-5B3CFA8BFAAD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C2E45802-1291-4154-82BC-A784DD8DE926}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2E45802-1291-4154-82BC-A784DD8DE926}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2E45802-1291-4154-82BC-A784DD8DE926}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2E45802-1291-4154-82BC-A784DD8DE926}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A83981D-8C54-4F4E-A04E-5B3CFA8BFAAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A83981D-8C54-4F4E-A04E-5B3CFA8BFAAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A83981D-8C54-4F4E-A04E-5B3CFA8BFAAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A83981D-8C54-4F4E-A04E-5B3CFA8BFAAD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C40A9E12-63E7-4066-94E1-5466C47398B8}
+	EndGlobalSection
+EndGlobal

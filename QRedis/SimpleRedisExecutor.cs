@@ -5,30 +5,30 @@ using System.Threading.Tasks;
 
 namespace QRedis
 {
-    public class DefaulyRedisExecutor : IRedisExecutor
+    public abstract class SimpleRedisExecutor : IRedisExecutor
     {
         internal class WorkItem
         {
             public string Queue;
             public string Message;
-            public Semaphore Done = new Semaphore(0, 1);
-            public bool Result;
+            public Semaphore WhenPickedUp = new Semaphore(0, 1);
+            public Action<bool> WhenDone;
         }
 
         private readonly Semaphore _semaphore = new Semaphore(0, int.MaxValue);
         private readonly ConcurrentQueue<WorkItem> _queue = new ConcurrentQueue<WorkItem>();
         private readonly Task[] _workers;
+
         private bool _stopped;
 
-        private readonly Action<string, string> _callback;
-
-        public DefaulyRedisExecutor(int threads, Action<string, string> callback)
+        public SimpleRedisExecutor(int threads)
         {
-            _callback = callback;
             _workers = new Task[threads];
             for (int i = 0; i < threads; ++i)
                 _workers[i] = Task.Run(() => Work());
         }
+
+        protected abstract bool Execute(string queue, string message);
 
         protected virtual void Work()
         {
@@ -39,41 +39,43 @@ namespace QRedis
                     return;
                 if (_queue.TryDequeue(out WorkItem item))
                 {
-                    try { _callback(item.Queue, item.Message); }
+                    bool result = false;
+                    item.WhenPickedUp.Release();
+
+                    try { result = Execute(item.Queue, item.Message); }
                     catch (Exception e) { RedisQueueManager.ErrorHandler("Error during message consumption", e); }
 
-                    item.Result = true;
-                    item.Done.Release();
+                    item.WhenDone(result);
                 }
             }
         }
 
-        public Task Execute(string queue, string message)
+        public void Enqueue(string queue, string message, Action<bool> whendone)
         {
             var item = new WorkItem
             {
                 Queue = queue,
-                Message = message
+                Message = message,
+                WhenDone = whendone
             };
 
             _queue.Enqueue(item);
             _semaphore.Release();
-            item.Done.WaitOne();
-
-            return item.Result;
+            item.WhenPickedUp.WaitOne();
         }
 
         public void Dispose()
         {
             _stopped = true;
+
             while (_queue.TryDequeue(out WorkItem item))
-                item.Done.Release();
+            {
+                item.WhenPickedUp.Release();
+                item.WhenDone(false);
+            }
 
             _semaphore.Release(_workers.Length);
             Task.WaitAll(_workers);
         }
-
-        // exempklifi priority
-
     }
 }

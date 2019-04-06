@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Threading.Tasks;
 
 namespace QRedis
 {
     public interface IRedisExecutor : IDisposable
     {
-        Task Execute(string queue, string message);
+        void Enqueue(string queue, string message, Action<bool> whendone);
     }
 }

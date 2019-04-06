@@ -30,7 +30,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DefaulyRedisExecutor.cs" />
+    <Compile Include="SimpleRedisExecutor.cs" />
     <Compile Include="IRedisExecutor.cs" />
     <Compile Include="RedisModel\IRedisModel.cs" />
     <Compile Include="RedisModel\RedisArray.cs" />

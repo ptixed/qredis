@@ -16,6 +16,8 @@ namespace QRedis
         private bool _stopped;
         private readonly object _socketlock = new object();
 
+        private readonly object _requestlock = new object();
+
         public RedisConnector(RedisServerConfig config)
         {
             Config = config;
@@ -50,12 +52,15 @@ namespace QRedis
             }
         }
 
-        internal virtual IRedisModel Request(params string[] command) => Request(true, command);
+        internal virtual IRedisModel Request(params string[] command)
+        {
+            lock (_requestlock)
+                return Request(true, command);
+        }
+
         private IRedisModel Request(bool fixsocket, params string[] command)
         {
-            var sb = new StringBuilder();
             var rarray = new RedisArray(command.Select(x => new RedisBulkString(x)));
-
             var writer = new RedisTokenWriter(rarray);
 
             var success = Send(fixsocket, Encoding.UTF8.GetBytes(writer.ToString()));

@@ -36,11 +36,5 @@ namespace QRedis
         {
             return Request("LPUSH", GetQueueName(queue), message).IsSuccess();
         }
-
-        internal override IRedisModel Request(params string[] command)
-        {
-            lock (this)
-                return base.Request(command);
-        }
     }
 }

@@ -8,21 +8,24 @@ namespace QRedis.RedisModel
     {
         public const char Peek0 = '*';
 
-        public static readonly RedisArray Nil = new RedisArray();
-
         private readonly List<IRedisModel> _elements;
 
         public RedisArray(IEnumerable<IRedisModel> elements) =>_elements = elements.ToList();
-        private RedisArray() => _elements = new List<IRedisModel>();
+        private RedisArray() { }
 
-        public void Add(IRedisModel element) => _elements.Add(element);
-        public IEnumerator GetEnumerator() => _elements.GetEnumerator();
+        public IEnumerator GetEnumerator() => _elements == null ? Enumerable.Empty<object>().GetEnumerator() : _elements.GetEnumerator();
 
         public void Serialize(RedisTokenWriter writer)
         {
             writer.WritePeek0(Peek0);
-            writer.WriteInt(this == Nil ? -1 : _elements.Count);
 
+            if (_elements == null)
+            {
+                writer.WriteInt(-1);
+                return;
+            }
+
+            writer.WriteInt(_elements.Count);
             foreach (var i in _elements)
                 i.Serialize(writer);
         }
@@ -32,7 +35,7 @@ namespace QRedis.RedisModel
             reader.ReadPeek0(Peek0);
             var count = reader.ReadInt();
             if (count == -1)
-                return Nil;
+                return new RedisArray();
 
             return new RedisArray(Enumerable.Range(0, count).Select(x => RedisProtocol.Parse(reader)));
         }

@@ -6,8 +6,6 @@ namespace QRedis
     {
         public const string Delimiter = "\r\n";
 
-        public static readonly IRedisModel Nil = RedisArray.Nil;
-
         public static IRedisModel Parse(RedisTokenReader reader)
         {
             var peek0 = reader.ReadPeek0();
@@ -27,6 +25,11 @@ namespace QRedis
             }
 
             return null;
+        }
+
+        public static bool IsSuccess(this IRedisModel model)
+        {
+            return model != null && !(model is RedisError);
         }
     }
 }

@@ -2,11 +2,11 @@
 
 namespace QRedis
 {
-    public class RedisServerConfig
+    public struct RedisServerConfig
     {
         public int Port;
         public string Server;
         public string Passowrd;
-        public TimeSpan ReconnectTimeout = TimeSpan.FromSeconds(1);
+        public TimeSpan ReconnectTimeout;
     }
 }

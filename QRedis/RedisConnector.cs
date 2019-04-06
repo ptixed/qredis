@@ -10,52 +10,47 @@ namespace QRedis
 {
     public class RedisConnector : IDisposable
     {
-        protected readonly RedisServerConfig _config;
+        public readonly RedisServerConfig Config;
         private Socket _socket;
 
         private bool _stopped;
-        private readonly object _connectlock = new object();
         private readonly object _socketlock = new object();
 
         public RedisConnector(RedisServerConfig config)
         {
-            _config = config;
-            ReConnect();
+            Config = config;
+            Connect(false);
         }
 
-        private void ReConnect()
+        private void Connect(bool retry)
         {
-            var socket = _socket;
-            lock (_connectlock)
-            { 
-                if (socket != _socket)
-                    return;
-
-                while (true)
+            while (true)
+            {
+                lock (_socketlock)
                 {
-                    lock (_socketlock)
-                    {
-                        if (_stopped)
-                            return;
-                        if (_socket != null)
-                            _socket.Dispose();
-                        _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    }
-
-                    try
-                    {
-                        _socket.Connect(_config.Server, _config.Port);
-                        if (_config.Passowrd == null || (Request(false, "AUTH", _config.Passowrd) as RedisSimpleString)?.Value == "OK")
-                            return;
-                    }
-                    catch (Exception e) { RedisQueueManager.ErrorHandler(null, e); }
-
-                    Thread.Sleep(_config.ReconnectTimeout);
+                    if (_stopped)
+                        return;
+                    if (_socket != null)
+                        _socket.Dispose();
+                    _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 }
+
+                try
+                {
+                    _socket.Connect(Config.Server, Config.Port);
+                    if (Config.Passowrd == null || (Request(false, "AUTH", Config.Passowrd) as RedisSimpleString)?.Value == "OK")
+                        return;
+                }
+                catch (Exception e) { RedisQueueManager.ErrorHandler(null, e); }
+
+                if (!retry)
+                    throw new Exception("Cannot connect to Redis instance");
+
+                Thread.Sleep(Config.ReconnectTimeout);
             }
         }
 
-        internal IRedisModel Request(params string[] command) => Request(true, command);
+        internal virtual IRedisModel Request(params string[] command) => Request(true, command);
         private IRedisModel Request(bool fixsocket, params string[] command)
         {
             var sb = new StringBuilder();
@@ -78,19 +73,22 @@ namespace QRedis
                     _socket.Send(data);
                     return true;
                 }
-                catch (SocketException)
+                catch (Exception e)
                 {
-                    if (!fixsocket)
+                    if (_stopped)
                         return false;
-                    ReConnect();
+
+                    if (e is IOException || e is SocketException)
+                    {
+                        if (fixsocket)
+                            Connect(true);
+                    }
+                    else
+                    {
+                        RedisQueueManager.ErrorHandler("Error in Send", e);
+                        return false;
+                    }
                 }
-                catch (IOException e)
-                {
-                    if (!_stopped)
-                        RedisQueueManager.ErrorHandler("Unknown error in Send", e);
-                }
-                catch (ObjectDisposedException) { return false; }
-                catch (Exception e) { RedisQueueManager.ErrorHandler("Unknown error in Send", e); }
         }
 
         private IRedisModel Receive(bool fixsocket)
@@ -99,30 +97,27 @@ namespace QRedis
             {
                 var ret = RedisProtocol.Parse(new RedisTokenReader(new StreamReader(new NetworkStream(_socket))));
                 if (ret is RedisError e)
-                {
                     RedisQueueManager.ErrorHandler(e.Value, null);
-                    return null;
-                }
                 return ret;
             }
-            catch (SocketException)
+            catch (Exception e)
             {
-                if (!fixsocket)
+                if (_stopped)
                     return null;
-                ReConnect();
-            }
-            catch (IOException e)
-            {
-                if (!_stopped)
-                    RedisQueueManager.ErrorHandler("Unknown error in Receive", e);
-            }
-            catch (ObjectDisposedException) { return null; }
-            catch (Exception e) { RedisQueueManager.ErrorHandler("Unknown error in Receive", e); }
 
-            return null;
+                if (e is IOException || e is SocketException)
+                {
+                    if (fixsocket)
+                        Connect(true);
+                }
+                else
+                    RedisQueueManager.ErrorHandler("Error in Receive", e);
+
+                return null;
+            }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             lock (_socketlock)
             {

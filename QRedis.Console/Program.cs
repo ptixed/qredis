@@ -9,16 +9,17 @@ namespace QRedis.Console
         static void Main(string[] args)
         {
             var queue = "test";
+
             RedisQueueManager.ErrorHandler = (x, e) =>
             {
                 WriteLine(x + " " + e);
             };
 
-            var manager = new RedisQueueManager(new RedisServerConfig
+            var manager = new RedisQueueManager(Environment.MachineName, new RedisServerConfig
             {
-                Passowrd = "aaa",
+                Passowrd = null,
                 Port = 6379,
-                ReconnectTimeout = TimeSpan.FromSeconds(1),
+                ReconnectTimeout = TimeSpan.FromSeconds(10),
                 Server = "192.168.56.101"
             });
 
@@ -32,18 +33,21 @@ namespace QRedis.Console
                 WriteLine("received: " + x);
             });
 
+            WriteLine("listening...");
+
             while (true)
             {
                 var line = ReadLine();
                 if (line == "exit")
                     break;
-                manager.Publish(queue, line);
+                if (manager.Publish(queue, line))
+                    WriteLine("published!");
             }
 
             consumer.Dispose();
             manager.Dispose();
 
-            WriteLine("Finished");
+            WriteLine("finished");
             ReadLine();
         }
     }

@@ -7,31 +7,40 @@ namespace QRedis
     {
         public static Action<string, Exception> ErrorHandler = delegate { };
 
-        public RedisQueueManager(RedisServerConfig config)
+        public readonly string InstanceName;
+
+        public RedisQueueManager(string instance, RedisServerConfig config)
             : base(config)
         {
-
+            InstanceName = instance;
         }
 
-        public static string GetQueueName(string name) => nameof(QRedis) + "." + name;
-        public static string GetProcessingQueueName(string name, string index) => nameof(QRedis) + "." + name + ".processing." + index;
+        public string GetQueueName(string queue) => $"{nameof(QRedis).ToLower()}.{queue}";
+        public string GetProcessingQueueName(string queue, string index) => $"{nameof(QRedis).ToLower()}.{queue}.{InstanceName}.{index}";
 
-        public RedisConsumer Consume(string name, int threads, Action<string> callback)
+        public IDisposable Consume(string queue, IRedisExecutor executor)
         {
-            var ks = Request("KEYS", GetProcessingQueueName(name, "*"));
-            if (!(ks is RedisArray ra))
+            var ks = Request("KEYS", GetProcessingQueueName(queue, "*")) as RedisArray;
+            if (ks == null)
                 return null;
 
             // push not fully processed messages back to queue
-            foreach (RedisBulkString k in ra)
-                Request("RPOPLPUSH", k.Value, GetQueueName(name));
+            foreach (RedisBulkString k in ks)
+                if (!Request("RPOPLPUSH", k.Value, GetQueueName(queue)).IsSuccess())
+                    return null;
 
-            return new RedisConsumer(name, _config, threads, callback);
+            return new RedisConsumer(this, executor, queue);
         }
         
-        public void Publish(string name, string message)
+        public bool Publish(string queue, string message)
         {
-            Request("LPUSH", GetQueueName(name), message);
+            return Request("LPUSH", GetQueueName(queue), message).IsSuccess();
+        }
+
+        internal override IRedisModel Request(params string[] command)
+        {
+            lock (this)
+                return base.Request(command);
         }
     }
 }
